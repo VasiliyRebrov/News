@@ -7,7 +7,6 @@ import com.data.db.AppDB
 import com.data.db.Item
 import com.data.db.ItemDao
 
-
 class Repository private constructor(private val dao: ItemDao) {
     fun getCategoryList(): LiveData<List<String>> {
         return Transformations.map(dao.getCategoryList()) { sourceList ->
@@ -26,23 +25,29 @@ class Repository private constructor(private val dao: ItemDao) {
     fun refreshData(): String {
         val currentItems = dao.getItemList()
         val newItems = parseNewItems().convertToEntity()
-        return if (currentItems.sortedBy { it.pubDateUnix } != newItems.sortedBy { it.pubDateUnix })
-            refreshDb(currentItems, newItems)
-        else
-            return "данные и так актуальны"
+        return refreshDb(currentItems, newItems)
     }
 
     private fun refreshDb(currentItems: List<Item>, newItems: List<Item>): String {
-        val toRemoveItems = with(currentItems.toMutableSet()) {
+        val toDeleteItems = with(currentItems.toMutableList()) {
             removeAll(newItems)
             toList()
         }
-        val toInsertItems = with(newItems.toMutableSet()) {
+        val toInsertItems = with(newItems.toMutableList()) {
             removeAll(currentItems)
             toList()
         }
-        val (deletedItems, addedItems) = dao.refreshData(toRemoveItems, toInsertItems)
-        return "добавлено $addedItems элементов\nудалено $deletedItems элементов"
+        return if (toDeleteItems.isNotEmpty() || toInsertItems.isNotEmpty()) {
+            val (deletedCount, insertedCount) = dao.refreshData(toDeleteItems, toInsertItems)
+            buildResultMsg(deletedCount, insertedCount)
+        } else "данные и так актуальны"
+    }
+
+    private fun buildResultMsg(deletedCount: Int, insertedCount: Int): String {
+        val separator = if (deletedCount > 0 && insertedCount > 0) "\n" else ""
+        val deletedMsg = if (deletedCount > 0) "удалено $deletedCount элементов" else ""
+        val addedMsg = if (insertedCount > 0) "добавлено $insertedCount элементов" else ""
+        return "$deletedMsg$separator$addedMsg"
     }
 
     companion object {

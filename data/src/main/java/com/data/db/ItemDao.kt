@@ -21,9 +21,9 @@ interface ItemDao {
 
     @Transaction
     fun refreshData(oldItems: List<Item>, newItems: List<Item>): Pair<Int, Int> {
-        val deletedItems = delete(oldItems)
-        val addedItems = insert(newItems)
-        return Pair(deletedItems, addedItems.size)
+        val deletedCount = delete(oldItems)
+        val addedCount = insert(newItems)
+        return Pair(deletedCount, addedCount.size)
     }
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
